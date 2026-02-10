@@ -1,0 +1,5 @@
+{
+  "name": "SciScan - Analyseur d'Articles",
+  "description": "Un outil intelligent pour analyser, résumer et discuter avec des articles scientifiques en utilisant l'IA Gemini.",
+  "requestFramePermissions": []
+}
