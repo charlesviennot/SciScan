@@ -9,7 +9,7 @@ import { Button } from './components/ui/Button';
 import { AppState, ScientificSummary, UploadedFile, HistoryItem, PageAnalysis, ChatMessage } from './types';
 import { analyzePaper, analyzePageByPage } from './services/gemini';
 import { saveToHistory, getHistory, deleteFromHistory, updateHistoryItem } from './services/storage';
-import { Microscope, RotateCcw, MessageSquare, FileText, Layers, Menu, X, BookOpen } from 'lucide-react';
+import { Microscope, RotateCcw, MessageSquare, FileText, Layers, Menu, X, BookOpen, Clock } from 'lucide-react';
 
 type Tab = 'summary' | 'pages' | 'chat' | 'reader';
 
@@ -57,9 +57,18 @@ const App: React.FC = () => {
     } catch (error: any) {
       console.error(error);
       setAppState(AppState.ERROR);
-      // More detailed error message
+      
+      // Detailed error handling for Quotas/Limits
+      const errorString = error?.toString() || "";
       const detailedError = error instanceof Error ? error.message : "Erreur inconnue";
-      setErrorMsg(`Une erreur est survenue lors de l'analyse : ${detailedError}. Veuillez vérifier votre clé API ou le format du fichier.`);
+      
+      if (errorString.includes("429") || detailedError.includes("429") || errorString.includes("Quota") || detailedError.includes("Quota")) {
+        setErrorMsg("Limite de requêtes atteinte (Quota API). Veuillez attendre environ 1 minute avant de réessayer.");
+      } else if (errorString.includes("API_KEY") || detailedError.includes("API_KEY")) {
+        setErrorMsg("Clé API manquante ou invalide. Veuillez vérifier la configuration de votre projet.");
+      } else {
+        setErrorMsg(`Une erreur est survenue lors de l'analyse : ${detailedError}. Vérifiez le format du fichier.`);
+      }
     }
   };
 
@@ -100,9 +109,14 @@ const App: React.FC = () => {
         item.id === currentHistoryId ? { ...item, pageAnalysis: pages } : item
       ));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Impossible de générer l'analyse par page. Veuillez réessayer.");
+      const errorString = error?.toString() || "";
+      if (errorString.includes("429")) {
+        alert("Limite de requêtes atteinte. Veuillez attendre un moment.");
+      } else {
+        alert("Impossible de générer l'analyse par page. Veuillez réessayer.");
+      }
     } finally {
       setIsPageAnalysisLoading(false);
     }
@@ -218,12 +232,14 @@ const App: React.FC = () => {
           )}
 
           {appState === AppState.ERROR && (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center animate-in fade-in">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8" />
+                {errorMsg && errorMsg.includes("429") ? <Clock className="w-8 h-8" /> : <FileText className="w-8 h-8" />}
               </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">Oups !</h2>
-              <p className="text-slate-500 mb-6 max-w-md">{errorMsg}</p>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                {errorMsg && errorMsg.includes("429") ? "Quota Atteint" : "Oups !"}
+              </h2>
+              <p className="text-slate-500 mb-6 max-w-md mx-auto">{errorMsg}</p>
               <Button onClick={handleReset}>Réessayer</Button>
             </div>
           )}
