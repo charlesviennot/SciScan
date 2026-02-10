@@ -56,7 +56,9 @@ const SEGMENTS_SCHEMA = {
 };
 
 export const analyzePaper = async (file: UploadedFile): Promise<ScientificSummary> => {
-  const model = "gemini-3-pro-preview"; 
+  // Switched to gemini-3-flash-preview as per instructions for summarization tasks
+  // It is also generally faster and more robust for initial analysis.
+  const model = "gemini-3-flash-preview"; 
   
   let contents;
 
@@ -105,7 +107,7 @@ export const analyzePaper = async (file: UploadedFile): Promise<ScientificSummar
 };
 
 export const analyzePageByPage = async (file: UploadedFile): Promise<PageAnalysis[]> => {
-  const model = "gemini-3-pro-preview";
+  const model = "gemini-3-pro-preview"; // Keeping Pro for complex page-by-page analysis if needed, or could switch to flash
 
   let contents;
   const prompt = "Analyse ce document page par page (ou section par section si les pages ne sont pas claires). Pour chaque page, fournis un résumé détaillé et précis de ce qui s'y trouve. Sois exhaustif. Réponds en Français.";
@@ -155,16 +157,18 @@ export const analyzePageByPage = async (file: UploadedFile): Promise<PageAnalysi
 export const extractDocumentSegments = async (file: UploadedFile, language: 'fr' | 'original' = 'fr'): Promise<string[]> => {
   const model = "gemini-3-flash-preview"; 
   
-  // Updated prompt for FULL TEXT extraction
-  let prompt = "TRANSCRIPTION INTÉGRALE : Extrais TOUT le contenu textuel principal de ce document pour une lecture audio complète. Ne fais PAS de résumé. Conserve tous les détails, explications et nuances du texte original. Ignore seulement les références bibliographiques finales et les bas de page purement techniques. Divise le texte en paragraphes logiques.";
+  // Updated prompt for FULL TEXT extraction with better quality control
+  let prompt = "TRANSCRIPTION INTÉGRALE ET NETTOYAGE : Extrais TOUT le contenu textuel principal de ce document pour une lecture audio. Conserve tous les détails. Divise le texte en paragraphes logiques.";
+  
+  prompt += " IMPORTANT : Assure-toi que le texte est PARFAITEMENT lisible. Corrige toutes les erreurs d'OCR (lettres manquantes, mots coupés, caractères bizarres). Ne laisse aucune phrase tronquée.";
   
   if (language === 'fr') {
-    prompt += " TRADUIS L'INTÉGRALITÉ DU TEXTE EN FRANÇAIS en gardant le sens exact et le flux de l'article original.";
+    prompt += " TRADUIS L'INTÉGRALITÉ DU TEXTE EN FRANÇAIS FLUIDE ET PROFESSIONNEL. Si le texte source a des erreurs, corrige-les dans la traduction.";
   } else {
-    prompt += " Conserve strictement la langue originale du document.";
+    prompt += " Conserve strictement la langue originale mais corrige les défauts visuels du PDF (ex: 're-sults' devient 'results').";
   }
   
-  prompt += " Retourne une liste JSON de chaînes de caractères (segments) où chaque segment est un paragraphe complet.";
+  prompt += " Retourne une liste JSON de chaînes de caractères (segments) où chaque segment est un paragraphe complet et propre.";
 
   let contents;
   if (file.type === 'image' || file.type === 'pdf') {

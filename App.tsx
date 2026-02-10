@@ -54,10 +54,12 @@ const App: React.FC = () => {
       setCurrentHistoryId(newItem.id);
       
       setAppState(AppState.SUCCESS);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setAppState(AppState.ERROR);
-      setErrorMsg("Une erreur est survenue lors de l'analyse. Veuillez vérifier votre clé API ou le format du fichier.");
+      // More detailed error message
+      const detailedError = error instanceof Error ? error.message : "Erreur inconnue";
+      setErrorMsg(`Une erreur est survenue lors de l'analyse : ${detailedError}. Veuillez vérifier votre clé API ou le format du fichier.`);
     }
   };
 

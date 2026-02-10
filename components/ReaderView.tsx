@@ -63,6 +63,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ file }) => {
       if (stopCurrentAudioRef.current) stopCurrentAudioRef.current();
       setIsPlaying(false);
       audioCacheRef.current.clear(); // Clear audio cache
+      setCurrentSegmentIndex(-1); // Reset index on new extraction
       
       try {
         const textSegments = await extractDocumentSegments(file, language);
@@ -149,12 +150,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ file }) => {
     }
 
     setIsPlaying(false);
-    setCurrentSegmentIndex(-1);
     stopCurrentAudioRef.current = null;
+    
+    // Only reset index if we naturally reached the end of the document
+    if (index >= segments.length) {
+        setCurrentSegmentIndex(-1);
+    }
   };
 
   const handleStart = () => {
-    startReadingLoop(0);
+    // If we have a stored index from a pause (and it's not the end), resume from there.
+    // Otherwise start from 0.
+    const startFrom = currentSegmentIndex >= 0 && currentSegmentIndex < segments.length 
+        ? currentSegmentIndex 
+        : 0;
+    startReadingLoop(startFrom);
   };
 
   const handleStop = () => {
@@ -163,6 +173,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ file }) => {
         stopCurrentAudioRef.current();
     }
     setIsPlaying(false);
+    // Do NOT reset setCurrentSegmentIndex(-1) here, so we can resume later
   };
 
   const handleSkip = () => {
@@ -315,7 +326,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ file }) => {
                         disabled={isExtracting || segments.length === 0}
                         className="flex-1 bg-science-600 hover:bg-science-500 text-white py-3 shadow-md"
                     >
-                        <Play size={18} className="mr-2 fill-current" /> Démarrer la Lecture
+                        <Play size={18} className="mr-2 fill-current" /> 
+                        {currentSegmentIndex > 0 ? 'Reprendre la Lecture' : 'Démarrer la Lecture'}
                     </Button>
                     ) : (
                     <>
